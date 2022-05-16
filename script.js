@@ -16,13 +16,21 @@ function init(){
 
 const clock = new THREE.Clock()
 
-const W = new THREE.Color( 0xffffff );
-const O = new THREE.Color( 0xffa500 );
-const R = new THREE.Color( 0xff0000 );
-const G = new THREE.Color( 0x00ff00 );
-const B = new THREE.Color( 0x0000ff );
-const Y = new THREE.Color( 0xffff00 );
-const K = new THREE.Color( 0x222222 );
+const W = new THREE.MeshBasicMaterial({color: 0xffffff });
+const O = new THREE.MeshBasicMaterial({color: 0xffa500 });
+const R = new THREE.MeshBasicMaterial({color: 0xff0000 });
+const G = new THREE.MeshBasicMaterial({color: 0x00ff00 });
+const B = new THREE.MeshBasicMaterial({color: 0x0000ff });
+const Y = new THREE.MeshBasicMaterial({color: 0xffff00 });
+
+const K = new THREE.MeshPhongMaterial({
+    color: 0x771177 , 
+    emissive: 0x111133,
+    shininess: 40,
+    specular: 0x171717,
+});
+
+const lineMat = new THREE.LineBasicMaterial( { color: 0x000000 } );
 
 geometry = new THREE.CircleGeometry( 10, 64 );
 groundMirror = new Reflector( geometry, {
@@ -37,7 +45,10 @@ statics = new THREE.Group()
 statics.add( groundMirror );
 
 const planeGeo = new THREE.PlaneGeometry(100, 100)
-const planeBottom = new THREE.Mesh( planeGeo, new THREE.MeshPhongMaterial( { color: 0xffffff } ) );
+const planeBottom = new THREE.Mesh( planeGeo, new THREE.MeshPhongMaterial( {
+    color: 0x444444,
+    emissive: 0x333333
+}));
 statics.add( planeBottom );
 
 statics.position.y = -4;
@@ -45,23 +56,15 @@ statics.rotateX( - Math.PI / 2 );
 
 scene.add(statics)
 
-// lights
-const mainLight = new THREE.PointLight( 0xcccccc, 1.5, 250 );
-mainLight.position.y = 50;
-scene.add( mainLight );
 
-function create_cube(size, colors){
+function create_cube(size, materials){
     // faces are front back up down left right
-    size *= 0.5
+    size *= 0.6
     const geo = new THREE.BoxGeometry(size, size, size);
     const cube = new THREE.Group();
-    const mats = []
-    for (let i = 0; i < colors.length; i++) {
-        mats.push(new THREE.MeshBasicMaterial({color:colors[i]}));
-    } 
-    const mesh = new THREE.Mesh( geo, mats );
+    const mesh = new THREE.Mesh( geo, materials );
     const edges = new THREE.EdgesGeometry( geo );
-    const line = new THREE.LineSegments( edges, new THREE.LineBasicMaterial( { color: K } ) );
+    const line = new THREE.LineSegments( edges,  lineMat);
     cube.add( line );
     cube.add( mesh );
     return cube
@@ -214,6 +217,40 @@ class Rubik{
         Object.keys(this.center_cubes).forEach(key=>{
             this.center_cubes[key].name = key;
         })
+        // Add light to center
+        this.light1 = new THREE.Group()
+        this.light1.add(new THREE.PointLight( 0xaa2222, 2, 250, 2));
+        this.light1.add(new THREE.Mesh(new THREE.SphereGeometry(this.size/10,64), new THREE.MeshLambertMaterial({color:0xffffff})));
+        this.pivot_mesh.add( this.light1 );
+
+        this.light2 = new THREE.Group()
+        this.light2.add(new THREE.PointLight( 0x22aa22, 2, 250, 2));
+        this.light2.add(new THREE.Mesh(new THREE.SphereGeometry(this.size/10,64), new THREE.MeshLambertMaterial({color:0xffffff})));
+        this.pivot_mesh.add( this.light2 );
+
+        this.light3 = new THREE.Group()
+        this.light3.add(new THREE.PointLight( 0x2222aa, 2, 250, 2));
+        this.light3.add(new THREE.Mesh(new THREE.SphereGeometry(this.size/10,64), new THREE.MeshLambertMaterial({color:0xffffff})));
+        this.pivot_mesh.add( this.light3 );
+
+        let self = this;
+        let tweenPos = new TWEEN.Tween({t: 0})
+        .to({t: '+1'}, 1000)
+        .onUpdate(function(obj){
+            self.light1.position.set(Math.sin(obj.t * Math.PI/2), 0, Math.cos(obj.t * Math.PI/2));
+            self.light1.position.multiplyScalar(self.size/3)
+
+            obj.t += 1
+            self.light2.position.set(Math.sin(obj.t * Math.PI/2), Math.cos(obj.t * Math.PI/2), 0);
+            self.light2.position.multiplyScalar(self.size/3)
+
+            self.light3.position.set(0, -Math.sin(obj.t * Math.PI/2), Math.cos(obj.t * Math.PI/2));
+            self.light3.position.multiplyScalar(self.size/3)
+        })
+        .repeat(Infinity)
+        .repeatDelay(1000)
+        .easing(TWEEN.Easing.Elastic.InOut)
+        .start();
     }
 
     getRubikSpacePos(in_cube){
@@ -528,12 +565,12 @@ function debug(){
 
 setInterval(debug, 2000);
 
-// window.onload = function () {
-//     document.getElementById('start-button').onclick = function(){
-//         let startScreen = document.getElementById('start-screen')
-//         startScreen.parentNode.removeChild(startScreen);
-//         init();
-//     }
-// };
+window.onload = function () {
+    document.getElementById('start-button').onclick = function(){
+        let startScreen = document.getElementById('start-screen')
+        startScreen.parentNode.removeChild(startScreen);
+        init();
+    }
+};
 
-init()
+// init();
